@@ -75,6 +75,37 @@ void expenses_list_add(OrderedExpenses *expenses, ExpenseValue new_value, LineNu
     expenses->num_expenses++;
 }
 
+void expenses_list_seek_sum_parts(OrderedExpenses *expenses, int sum_to_seek, int num_parts, Expense **expense_iterators, int depth, ExpenseValue *found_sum)
+{
+    ExpenseValue sum;
+    do
+    {
+        if (depth == num_parts - 1)
+        {
+            sum = 0;
+            for (int part_i = 0; part_i < num_parts; part_i++)
+            {
+                sum += expense_iterators[part_i]->value;
+            }
+            if (sum == sum_to_seek)
+            {
+                *found_sum = sum;
+                return;
+            }
+        }
+        else
+        {
+            expense_iterators[depth + 1] = expenses->smallest_expense;
+            expenses_list_seek_sum_parts(expenses, sum_to_seek, num_parts, expense_iterators, depth + 1, found_sum);
+            if (*found_sum > 0) {
+                return;
+            }
+        }
+    }
+    while ((expense_iterators[depth] = expense_iterators[depth]->next_greater_expense) != NULL);
+}
+
+
 char stdin_buffer_of_max_digit_size[EXPENSE_DIGITS];
 
 int main(int argc, char *argv[])
@@ -85,6 +116,15 @@ int main(int argc, char *argv[])
     char *digits_end_ptr;
     int num_bytes_read;
     LineNumber line_number = 0;
+    int sum_parts = 2;
+
+    if (argc == 2) {
+        sum_parts = atoi(argv[1]);
+        if (sum_parts < 2) {
+            fprintf(stderr, "Summing over fewer than 2 parts makes no sense.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     expenses_list_init(&expenses, 10);
 
@@ -95,6 +135,7 @@ int main(int argc, char *argv[])
     while ((num_bytes_read = read(STDIN_FILENO, digits, EXPENSE_DIGITS)) != 0)
     {
         line_number++;
+        fprintf(stdout, "%s\n", digits);
         errno = 0;
         value = strtol(digits, &digits_end_ptr, 10);
         if ((errno == ERANGE && (value == LONG_MAX || value == LONG_MIN))
@@ -112,31 +153,31 @@ int main(int argc, char *argv[])
         expenses_list_add(&expenses, value, line_number);
     }
 
-    Expense* expense_i = expenses.smallest_expense;
-    Expense* expense_j;
-    do
+    Expense *expense_iterators[sum_parts];
+    for (int part_i = 0; part_i < sum_parts; part_i++)
     {
-        expense_j = expenses.smallest_expense;
-        do
-        {
-            if ((expense_i->value + expense_j->value) == SOUGHT_SUM)
-            {
-                fprintf(
-                    stdout, "%d = %ld [line %ld] + %ld [line %ld]\n%ld * %ld = %ld\n",
-                    SOUGHT_SUM,
-                    expense_i->value, expense_i->line_number,
-                    expense_j->value, expense_j->line_number,
-                    expense_i->value, expense_j->value, expense_i->value * expense_j->value
-                );
-                exit(EXIT_SUCCESS);
-            }
-        }
-        while ((expense_j = expense_j->next_greater_expense) != NULL);
+        expense_iterators[part_i] = expenses.smallest_expense;
     }
-    while ((expense_i = expense_i->next_greater_expense) != NULL);
+    ExpenseValue found_sum;
+    expenses_list_seek_sum_parts(&expenses, SOUGHT_SUM, sum_parts, expense_iterators, 0, &found_sum);
 
-    fprintf(stderr, "No 2 expenses found that sum to %i\n", SOUGHT_SUM);
-    exit(EXIT_FAILURE);
+    if (found_sum > 0) {
+        ExpenseValue product = 1;
+        ExpenseValue sum = 0;
+        for (int part_i = 0; part_i < sum_parts; part_i++)
+        {
+            fprintf(stdout, "%ld on line %ld\n", expense_iterators[part_i]->value, expense_iterators[part_i]->line_number);
+            product *= expense_iterators[part_i]->value;
+        }
+        fprintf(stdout, "%ld = product\n", product);
+        fprintf(stdout, "%ld = sum\n", found_sum);
+        exit(EXIT_SUCCESS);
+    }
+    else
+    {
+        fprintf(stderr, "No %d expenses found that sum to %d\n", sum_parts, SOUGHT_SUM);
+        exit(EXIT_FAILURE);
+    }
 }
 
 
