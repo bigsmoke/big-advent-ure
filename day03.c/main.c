@@ -13,11 +13,15 @@
 int main(int argc, char *argv[])
 {
     char grid_line_pattern[GRID_LINE_INPUT_LENGTH];
-    int bytes_read;
-    // fcntl(stdin);
-    while ((bytes_read = read(STDIN_FILENO, &grid_line_pattern, GRID_LINE_INPUT_LENGTH)) != 0)
+    int n;
+    int x = 1, y = 1;
+    int pattern_i = 0;
+    int direction_x = 3, direction_y = 1;
+    int trees_encountered = 0;
+
+    while ((n = read(STDIN_FILENO, &grid_line_pattern, GRID_LINE_INPUT_LENGTH)) != 0)
     {
-        if (bytes_read == -1)
+        if (n == -1)
         {
             if (errno == EINTR)
             {
@@ -29,15 +33,24 @@ int main(int argc, char *argv[])
             fputs(strerror(errno), stderr);
             break;
         }
+        // write(STDOUT_FILENO, grid_line_pattern, n);
+        fprintf(stdout, "%d (%d), %d\n", x, pattern_i, y);
 
-        write(STDOUT_FILENO, grid_line_pattern, bytes_read);
+        if (grid_line_pattern[pattern_i] == TREE_CHAR)
+        {
+            trees_encountered++;
+        }
 
+        x += direction_x;
+        pattern_i += direction_x;
+        if (pattern_i >= GRID_LINE_PATTERN_LENGTH)
+            pattern_i = pattern_i - GRID_LINE_PATTERN_LENGTH;
+        y += direction_y;
     }
 
+    fprintf(stdout, "%d\n", trees_encountered);
     return 0;
 }
-
-pthread_create(&thread, functie, arg);
 
 
 // vim: set expandtab shiftwidth=4 tabstop=4:
