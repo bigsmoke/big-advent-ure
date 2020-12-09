@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <getopt.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,10 +9,66 @@
 
 #define BUFFER_SIZE 1024
 #define EXPENSE_DIGITS 16
-#define SOUGHT_SUM 2020
+#define DEFAULT_SUM_SOUGHT 2020
+#define DEFAULT_NUM_PARTS 2
 
 
-typedef long expense_value_t;
+void show_usage(const char *program_name)
+{
+    printf(
+        "Read a list of integer expenses from STDIN and output the product of the <n> numbers that sum to <sum>\n"
+        "\n"
+        "Usage:\n"
+        "  %s [-n <n>] [-s <sum>] < <puzzle_input.txt>\n"
+        "\n"
+        "Options:\n"
+        "  -h --help          Show this help message.\n"
+        "  -v --verbose       Run in verbose mode.\n"
+        "  -s --sum <sum>     The amount to which the expenses used must sum [default: %d].\n"
+        "  -n --parts <n>     The number of parts which, together have to sum to <sum> [default: %d].\n"
+        "\n"
+        "On success, %s returns with exit code 0.\n"
+        "When no <n> parts can be found which sum to <sum>, %s returns with exit code 2.\n"
+        "On any other type of failure condition, %s returns with exit code 1.\n",
+        program_name,
+        DEFAULT_SUM_SOUGHT,
+        DEFAULT_NUM_PARTS,
+        program_name,
+        program_name,
+        program_name
+    );
+}
+
+struct program_options {
+    int verbose;
+    int sum;
+    int num_parts;
+};
+
+void parse_options(struct program_options *options, int argc, char *argv[])
+{
+    int c;
+    int digit_optind = 0;
+    int option_index = 0;
+    static struct option long_options[] = {
+        {"help",    no_argument,        0,  'h' },
+        {"verbose", no_argument,        0,  'v' },
+        {"sum",     required_argument,  0,  's' },
+        {"parts",   required_argument,  0,  'n' },
+    };
+    while ((c = getopt_longopt(argc, argv, "hvs:n:", long_options, &option_index)) != -1)
+    {
+        int this_option_optind = optind ? optind : 1;
+        switch (c)
+        {
+            case 'verbose'
+        }
+    }
+}
+
+
+
+typedef long expense_value_t
 typedef size_t line_number_t;
 
 typedef struct expense {
@@ -162,7 +219,7 @@ int main(int argc, char *argv[])
         expense_iterators[part_i] = expenses.smallest_expense;
     }
     expense_value_t found_sum;
-    expenses_list_seek_sum_parts(&expenses, SOUGHT_SUM, sum_parts, expense_iterators, 0, &found_sum);
+    expenses_list_seek_sum_parts(&expenses, DEFAULT_SUM_SOUGHT, sum_parts, expense_iterators, 0, &found_sum);
 
     if (found_sum > 0) {
         expense_value_t product = 1;
@@ -178,7 +235,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        fprintf(stderr, "No %d expenses found that sum to %d\n", sum_parts, SOUGHT_SUM);
+        fprintf(stderr, "No %d expenses found that sum to %d\n", sum_parts, DEFAULT_SUM_SOUGHT);
         exit(EXIT_FAILURE);
     }
 }
