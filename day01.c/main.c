@@ -11,33 +11,33 @@
 #define SOUGHT_SUM 2020
 
 
-typedef long ExpenseValue;
-typedef size_t LineNumber;
+typedef long expense_value_t;
+typedef size_t line_number_t;
 
-typedef struct Expense {
-    struct Expense *next_greater_expense;
-    ExpenseValue value;
-    LineNumber line_number;
-} Expense;
+typedef struct expense {
+    struct expense *next_greater_expense;
+    expense_value_t value;
+    line_number_t line_number;
+} expense_t;
 
 typedef struct {
-    Expense *smallest_expense;
-    Expense *greatest_expense;
+    expense_t *smallest_expense;
+    expense_t *greatest_expense;
     size_t num_expenses;
-} OrderedExpenses;
+} ordered_expenses_t;
 
-void expenses_list_init(OrderedExpenses *expenses, size_t initial_size)
+void expenses_list_init(ordered_expenses_t *expenses, size_t initial_size)
 {
     expenses->num_expenses = 0;
     expenses->smallest_expense = NULL;
     expenses->greatest_expense = NULL;
 }
 
-void expenses_list_add(OrderedExpenses *expenses, ExpenseValue new_value, LineNumber line_number)
+void expenses_list_add(ordered_expenses_t *expenses, expense_value_t new_value, line_number_t line_number)
 {
-    Expense *current_expense = expenses->smallest_expense;  // Will be NULL if the list is empty.
-    Expense *previous_expense = NULL;
-    Expense *new_expense = (Expense*)malloc(sizeof(Expense));
+    expense_t *current_expense = expenses->smallest_expense;  // Will be NULL if the list is empty.
+    expense_t *previous_expense = NULL;
+    expense_t *new_expense = (expense_t*)malloc(sizeof(expense_t));
     new_expense->value = new_value;
     new_expense->line_number = line_number;
 
@@ -75,9 +75,9 @@ void expenses_list_add(OrderedExpenses *expenses, ExpenseValue new_value, LineNu
     expenses->num_expenses++;
 }
 
-void expenses_list_seek_sum_parts(OrderedExpenses *expenses, int sum_to_seek, int num_parts, Expense **expense_iterators, int depth, ExpenseValue *found_sum)
+void expenses_list_seek_sum_parts(ordered_expenses_t *expenses, int sum_to_seek, int num_parts, expense_t **expense_iterators, int depth, expense_value_t *found_sum)
 {
-    ExpenseValue sum;
+    expense_value_t sum;
     do
     {
         if (depth == num_parts - 1)
@@ -110,12 +110,12 @@ char stdin_buffer_of_max_digit_size[EXPENSE_DIGITS];
 
 int main(int argc, char *argv[])
 {
-    OrderedExpenses expenses;
-    ExpenseValue value;
+    ordered_expenses_t expenses;
+    expense_value_t value;
     char *digits;
     char *digits_end_ptr;
     int num_bytes_read;
-    LineNumber line_number = 0;
+    line_number_t line_number = 0;
     int sum_parts = 2;
 
     if (argc == 2) {
@@ -153,17 +153,17 @@ int main(int argc, char *argv[])
         expenses_list_add(&expenses, value, line_number);
     }
 
-    Expense *expense_iterators[sum_parts];
+    expense_t *expense_iterators[sum_parts];
     for (int part_i = 0; part_i < sum_parts; part_i++)
     {
         expense_iterators[part_i] = expenses.smallest_expense;
     }
-    ExpenseValue found_sum;
+    expense_value_t found_sum;
     expenses_list_seek_sum_parts(&expenses, SOUGHT_SUM, sum_parts, expense_iterators, 0, &found_sum);
 
     if (found_sum > 0) {
-        ExpenseValue product = 1;
-        ExpenseValue sum = 0;
+        expense_value_t product = 1;
+        expense_value_t sum = 0;
         for (int part_i = 0; part_i < sum_parts; part_i++)
         {
             fprintf(stdout, "%ld on line %ld\n", expense_iterators[part_i]->value, expense_iterators[part_i]->line_number);
