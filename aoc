@@ -1,0 +1,38 @@
+#!/bin/bash
+
+
+ME="$(basename "$0")"
+
+
+language=c
+day="$(date '+%d')"
+
+
+usage() {
+    cat <<EOF
+Usage:
+    $ME solve [(--day | -d) <day>]
+    $ME test
+EOF
+}
+
+
+while [ -n "$1" ]; do
+    case "$1" in
+        --day | -d)
+            day="$2"
+            shift
+            ;;
+        --language | -l)
+            language="$2"
+            shift
+            ;;
+    esac
+    shift
+done
+usage
+
+test_day() {
+    day="$1"
+    day_dir="$day.$SOLUTION_LANGUAGE"
+}
