@@ -1,38 +1,132 @@
 #!/bin/bash
 
 
-ME="$(basename "$0")"
+AOC_INPUT_URL_TPL="https://adventofcode.com/2020/day/<day>/input"
+
+AOC_EXAMPLE_D1_IN=$(cat <<'EOF'
+1721
+979
+366
+299
+675
+1456
+EOF
+)
+AOC_EXAMPLE_D1_P1="514579"
+AOC_EXAMPLE_D1_P2="241861950"
+AOC_EXAMPLE_D2_IN=$(cat <<'EOF'
+1-3 a: abcde
+1-3 b: cdefg
+2-9 c: ccccccccc
+EOF
+)
+AOC_EXAMPLE_D2_P1="2"
+AOC_EXAMPLE_D2_P2="1"
 
 
-language=c
+MY_NAME="$(basename "$0")"
+MY_PATH="$0"
+MY_WDIR="$(dirname "$0")"
+
+
+language="c"
 day="$(date '+%d')"
-
+part="1"
+subcmd=""
+test_all="false"
 
 usage() {
     cat <<EOF
 Usage:
-    $ME solve [(--day | -d) <day>]
-    $ME test
+    $MY_NAME solve --day=<day> [--part=<part>]
+    $MY_NAME test (--day=<day> [--part=<part>] | --all) [--watch]
+    $MY_NAME (-h | --help)
+
+Options:
+    -d --day=<day>          Which day's puzzle you want to test/run [default: $day].
+                            The default changes with the day as the AoC progresses.
+    -p --part=<part>        Part 1 or 2 of the day's puzzle [default: 1].
+    -a --all                Test the solvers for all the days, instead of just the one for a single day (part)
+                            its puzzle.
+    -e --expect=<expect>    The expected output that the test input should produce.
+    -h --help               Show this help.
 EOF
 }
 
-
+extract_opt_arg() {
+    echo "${1#*=}"
+}
+case "$1" in
+    solve | test)
+        subcmd="$1"
+        ;;
+    --help | -h)
+        usage
+        exit 0
+        ;;
+    *)
+        echo -e "\033[31mSpecify either the \033[1msolve\033[22m or the \033[1mtest\033[22m subcommand.\033[0m"
+        usage
+        exit 1
+        ;;
+esac
+shift
 while [ -n "$1" ]; do
     case "$1" in
         --day | -d)
             day="$2"
             shift
             ;;
+        --day=*)
+            day="$(extract_opt_arg "$1")"
+            ;;
+        --part | -p)
+            part="$2"
+            shift
+            ;;
+        --part=*)
+            part="$(extract_opt_arg "$1")"
+            ;;
+        --all | -a)
+            test_all="true"
+            ;;
         --language | -l)
             language="$2"
             shift
             ;;
+        --language=*)
+            language="$(extract_opt_arg "$1")"
+            ;;
     esac
     shift
 done
-usage
 
-test_day() {
-    day="$1"
-    day_dir="$day.$SOLUTION_LANGUAGE"
+day_input_url="${AOC_INPUT_URL_TPL/<day>/$day}"
+day_dir="day$(printf "%02d" "$day")"
+day_bin="$day_dir.$language/solve"
+day_part="d${day}p${part}"
+
+
+test_solution() {
+    local test_output="$("$day_bin" "$part")"
 }
+
+test_all() {
+    "$MY_PATH" test --day 1 --part 1
+    "$MY_PATH" test --day 1 --part 2
+}
+
+test() {
+    echo "boo"
+}
+
+solve() {
+    if [ -z "$AOC_SESSION_ID" ]; then
+        echo -e "\033[31mThe \033[1m\$AOC_SESSION_ID\033[22m environment variable must be set."
+        echo -e "Unable to fetch today's input from: \033[1m$day_input_url\033[0m"
+    fi
+
+    curl --cookie "session=$AOC_SESSION_ID" "$day_input_url" 2>/dev/null | "$day_bin" -p "$part"
+}
+
+$subcmd
