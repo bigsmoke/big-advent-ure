@@ -1,2 +1,2 @@
-run: main.c
+solve: main.c
 	gcc -o $@ $^

@@ -1,2 +1,2 @@
-count_valid_passwords: main.c
+solve: main.c
 	gcc -o $@ $^

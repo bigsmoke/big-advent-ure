@@ -3,26 +3,6 @@
 
 AOC_INPUT_URL_TPL="https://adventofcode.com/2020/day/<day>/input"
 
-AOC_EXAMPLE_D1_IN=$(cat <<'EOF'
-1721
-979
-366
-299
-675
-1456
-EOF
-)
-AOC_EXAMPLE_D1_P1="514579"
-AOC_EXAMPLE_D1_P2="241861950"
-AOC_EXAMPLE_D2_IN=$(cat <<'EOF'
-1-3 a: abcde
-1-3 b: cdefg
-2-9 c: ccccccccc
-EOF
-)
-AOC_EXAMPLE_D2_P1="2"
-AOC_EXAMPLE_D2_P2="1"
-
 
 MY_NAME="$(basename "$0")"
 MY_PATH="$0"
@@ -34,6 +14,7 @@ day="$(date '+%d')"
 part="1"
 subcmd=""
 test_all="false"
+test_watch="false"
 
 usage() {
     cat <<EOF
@@ -48,7 +29,7 @@ Options:
     -p --part=<part>        Part 1 or 2 of the day's puzzle [default: 1].
     -a --all                Test the solvers for all the days, instead of just the one for a single day (part)
                             its puzzle.
-    -e --expect=<expect>    The expected output that the test input should produce.
+    -w --watch              Wait and rerun the test when an inotify event occurs.
     -h --help               Show this help.
 EOF
 }
@@ -90,6 +71,9 @@ while [ -n "$1" ]; do
         --all | -a)
             test_all="true"
             ;;
+        --watch | -w)
+            test_watch="true"
+            ;;
         --language | -l)
             language="$2"
             shift
@@ -101,14 +85,25 @@ while [ -n "$1" ]; do
     shift
 done
 
-day_input_url="${AOC_INPUT_URL_TPL/<day>/$day}"
-day_dir="day$(printf "%02d" "$day")"
-day_bin="$day_dir.$language/solve"
-day_part="d${day}p${part}"
-
+day_url="${AOC_INPUT_URL_TPL/<day>/$day}"
+day_input_url="$day_url/input"
+day_padded="day$(printf "%02d" "$day")"
+day_bin="$day_padded.$language/solve"
+day_part="$day_padded-part$part"
 
 test_solution() {
-    local test_output="$("$day_bin" "$part")"
+    local day_example_in="${day_padded}.example.in.txt"
+    local day_part_example_out="$(cat "${day_part}.example.out.txt")"
+    local test_output="$("$day_bin" "$part" < "$day_example_in" 2>&1)"
+    local test_result=$?
+    echo -e "aoc test --day=\e[1m$day\e[0m --part=\e[1m$part\e[0m"
+    echo -ne "    expected output = \e[1m$day_part_example_out\e[0m"
+    if [ "$day_part_example_out" != "$test_output" ]; then
+        echo -e "\e[31m ≠ actual output = \e[1m${test_output}\e[0m"
+        echo -e "    \e[1m$day_bin\e[22m returned with exit code \e[1m$test_result\e[0m."
+    else
+        echo -e "\e[32m = actual output = \e[1m${test_output}\e[0m"
+    fi
 }
 
 test_all() {
@@ -117,7 +112,11 @@ test_all() {
 }
 
 test() {
-    echo "boo"
+    if [ "$test_all" = "true" ]; then
+        test_all
+    else
+        test_solution
+    fi
 }
 
 solve() {
