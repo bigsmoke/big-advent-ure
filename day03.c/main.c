@@ -50,7 +50,8 @@ int main(int argc, char *argv[])
         day_part = atoi(argv[1]);
     }
 
-    char grid_line_pattern[GRID_LINE_INPUT_LENGTH];  // We know the actual input lines don't exceed this size.
+    char *grid_line_pattern;
+    grid_line_pattern = malloc(sizeof(char) * GRID_LINE_INPUT_LENGTH);  // We know the actual input lines don't exceed this size.
     int n;
     int line_no = 0;
     size_t line_length;
@@ -58,7 +59,7 @@ int main(int argc, char *argv[])
 
     while (getline(&grid_line_pattern, &line_length, stdin) != -1)
     {
-        pattern_length = line_length - 1;
+        pattern_length = strlen(grid_line_pattern) - 1;  // Exclude newline
 
         if (n == -1)
         {
@@ -88,8 +89,8 @@ int main(int argc, char *argv[])
 
             runs[i].x += runs[i].direction_x;
             runs[i].pattern_i += runs[i].direction_x;
-            if (runs[i].pattern_i >= GRID_LINE_PATTERN_LENGTH)
-                runs[i].pattern_i = runs[i].pattern_i - GRID_LINE_PATTERN_LENGTH;
+            if (runs[i].pattern_i >= pattern_length)
+                runs[i].pattern_i = runs[i].pattern_i - pattern_length;
             runs[i].y += runs[i].direction_y;
         }
     }
@@ -97,10 +98,8 @@ int main(int argc, char *argv[])
     int product = 1;
     for (int i = 0; i < num_runs; i++)
     {
-        fprintf(stdout, "%d %d %d\n", runs[i].puzzle_part_filter, day_part, runs[i].trees_encountered);
         if ((runs[i].puzzle_part_filter & day_part) == 0)
             continue;
-        fprintf(stdout, "%d\n", runs[i].trees_encountered);
         product *= runs[i].trees_encountered;
     }
     fprintf(stdout, "%d\n", product);
