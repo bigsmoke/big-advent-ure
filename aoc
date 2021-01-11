@@ -145,9 +145,13 @@ test_all() {
             "$MY_PATH" test --day "$aoc_day" --part "$aoc_day_part"
             if [ "$?" -eq 8 ]; then
                 echo -e "    \e[33mNot testing any later days, because you're probably just this much behind.\e[0m"
-                exit 8
+                local behind="true"
+                break
             fi
         done
+        if [ -n "$behind" ]; then
+            break
+        fi
 
         let "aoc_day = $aoc_day + 1"
     done
