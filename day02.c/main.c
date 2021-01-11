@@ -7,9 +7,10 @@ int main(int argc, char *argv[])
 {
     int day_part = 1;
     if (argc > 1) {
-        if (strcmp(argv[1], "2") != 0)
+        if (strcmp(argv[1], "1") != 0 && strcmp(argv[1], "2") != 0)
         {
             fprintf(stderr, "Invalid argument: '%s'\n", argv[1]);
+            fprintf(stderr, "Usage: solve <part>\n\n    <part>   Part 1 or 2 of the day's puzzle [default: 1]\n");
             exit(EXIT_FAILURE);
         }
         day_part = atoi(argv[1]);
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    printf("Valid passwords according to the Official Toboggan Corporate Authentication System: %d\n", num_valid_passwords);
+    printf("%d\n", num_valid_passwords);
     return 0;
 }
 

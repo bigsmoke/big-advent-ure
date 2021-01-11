@@ -112,45 +112,48 @@ int main(int argc, char *argv[])
 {
     OrderedExpenses expenses;
     ExpenseValue value;
-    char *digits;
-    char *digits_end_ptr;
-    int num_bytes_read;
+    char *line_buffer;
+    char *line_end_ptr;
+    size_t line_size;
     LineNumber line_number = 0;
     int sum_parts = 2;
+    int day_part = 1;
 
     if (argc == 2) {
-        sum_parts = atoi(argv[1]);
-        if (sum_parts < 2) {
-            fprintf(stderr, "Summing over fewer than 2 parts makes no sense.\n");
+        day_part = atoi(argv[1]);
+        if (day_part != 1 && day_part != 2) {
+            fprintf(stderr, "Invalid argument: '%s'\n", argv[1]);
+            fprintf(stderr, "Usage: solve <part>\n\n    <part>   Part 1 or 2 of the day's puzzle [default: 1]\n");
             exit(EXIT_FAILURE);
         }
     }
 
+    if (day_part == 2)
+        sum_parts = 3;
+
     expenses_list_init(&expenses, 10);
 
-    digits = malloc(EXPENSE_DIGITS);
+    line_buffer = malloc(EXPENSE_DIGITS);
 
-    setvbuf(stdin, stdin_buffer_of_max_digit_size, _IOLBF, EXPENSE_DIGITS);
-
-    while ((num_bytes_read = read(STDIN_FILENO, digits, EXPENSE_DIGITS)) != 0)
+    while (getline(&line_buffer, &line_size, stdin) != -1)
     {
         line_number++;
-        fprintf(stdout, "%s\n", digits);
         errno = 0;
-        value = strtol(digits, &digits_end_ptr, 10);
+        value = strtol(line_buffer, &line_end_ptr, 10);
         if ((errno == ERANGE && (value == LONG_MAX || value == LONG_MIN))
                 || (errno != 0 && value == 0))
         {
             perror("strtol()");
             exit(EXIT_FAILURE);
         }
-        if (digits_end_ptr == digits)
+        if (line_end_ptr == line_buffer)
         {
             fprintf(stderr, "No digits were found\n");
             exit(EXIT_FAILURE);
         }
 
         expenses_list_add(&expenses, value, line_number);
+        memset(line_buffer, 0, EXPENSE_DIGITS);  // Clear buffer.
     }
 
     Expense *expense_iterators[sum_parts];
@@ -166,11 +169,11 @@ int main(int argc, char *argv[])
         ExpenseValue sum = 0;
         for (int part_i = 0; part_i < sum_parts; part_i++)
         {
-            fprintf(stdout, "%ld on line %ld\n", expense_iterators[part_i]->value, expense_iterators[part_i]->line_number);
+            //fprintf(stdout, "%ld on line %ld\n", expense_iterators[part_i]->value, expense_iterators[part_i]->line_number);
             product *= expense_iterators[part_i]->value;
         }
-        fprintf(stdout, "%ld = product\n", product);
-        fprintf(stdout, "%ld = sum\n", found_sum);
+        fprintf(stdout, "%ld\n", product);
+        //fprintf(stdout, "%ld = sum\n", found_sum);
         exit(EXIT_SUCCESS);
     }
     else

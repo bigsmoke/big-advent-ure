@@ -10,11 +10,10 @@ MY_WDIR="$(dirname "$0")"
 
 
 language="c"
-day="$(date '+%d')"
 part="1"
 subcmd=""
-test_all="false"
-test_watch="false"
+test_all=""
+test_watch=""
 
 usage() {
     cat <<EOF
@@ -24,9 +23,9 @@ Usage:
     $MY_NAME (-h | --help)
 
 Options:
-    -d --day=<day>          Which day's puzzle you want to test/run [default: $day].
+    -d --day=<day>          Which day's puzzle you want to test/run.
                             The default changes with the day as the AoC progresses.
-    -p --part=<part>        Part 1 or 2 of the day's puzzle [default: 1].
+    -p --part=<part>        Part 1 or 2 of the day's puzzle [default: $part].
     -a --all                Test the solvers for all the days, instead of just the one for a single day (part)
                             its puzzle.
     -w --watch              Wait and rerun the test when an inotify event occurs.
@@ -46,8 +45,8 @@ case "$1" in
         exit 0
         ;;
     *)
-        echo -e "\033[31mSpecify either the \033[1msolve\033[22m or the \033[1mtest\033[22m subcommand.\033[0m"
-        usage
+        echo -e "\033[31mSpecify either the \033[1msolve\033[22m or the \033[1mtest\033[22m subcommand.\033[0m" >&2
+        usage >&2
         exit 1
         ;;
 esac
@@ -85,18 +84,44 @@ while [ -n "$1" ]; do
     shift
 done
 
-day_url="${AOC_INPUT_URL_TPL/<day>/$day}"
-day_input_url="$day_url/input"
+if [ "$subcmd" = "test" ] && [ -z "$day" ] && [ -z "$test_all" ]; then
+    echo -e "\033[31;1maoc test\e[22m requires either the \e[1m--day <day>\e[22m or \e[1m--test-all\e[22m option.\033[0m" >&2
+    usage >&2
+    exit 1
+fi
+if [ "$subcmd" = "solve" ] && [ -z "$day" ]; then
+    echo -e "\033[31;1maoc solve\e[22m requires that you specify a \e[1m--day <day>\e[22m parameter.\033[0m" >&2
+    usage >&2
+    exit 1
+fi
+
+day_input_url="${AOC_INPUT_URL_TPL/<day>/$day}"
 day_padded="day$(printf "%02d" "$day")"
 day_bin="$day_padded.$language/solve"
 day_part="$day_padded-part$part"
 
 test_solution() {
-    local day_example_in="${day_padded}.example.in.txt"
-    local day_part_example_out="$(cat "${day_part}.example.out.txt")"
-    local test_output="$("$day_bin" "$part" < "$day_example_in" 2>&1)"
-    local test_result=$?
     echo -e "aoc test --day=\e[1m$day\e[0m --part=\e[1m$part\e[0m"
+
+    local day_example_in_file="${day_padded}.example.in.txt"
+    local day_part_example_out_file="${day_part}.example.out.txt"
+
+    if [ ! -x "$day_bin" ]; then
+        echo -e "    \e[33;1m$day_bin\e[22m not compiled yet...\e[0m"
+        exit 8
+    fi
+    if [ ! -f "$day_example_in_file" ]; then
+        echo -e "    \e[33mExample input for day $day missing: \e[1m${day_example_in_file}\e[0m"
+        exit 8
+    fi
+    if [ ! -f "$day_part_example_out_file" ]; then
+        echo -e "    \e[33mExample output for day $day, part $part missing: \e[1m${day_part_example_out_file}\e[0m"
+        exit 8
+    fi
+
+    local day_part_example_out="$(cat "$day_part_example_out_file")"
+    local test_output="$("$day_bin" "$part" < "$day_example_in_file" 2>&1)"
+    local test_result=$?
     echo -ne "    expected output = \e[1m$day_part_example_out\e[0m"
     if [ "$day_part_example_out" != "$test_output" ]; then
         echo -e "\e[31m ≠ actual output = \e[1m${test_output}\e[0m"
@@ -107,12 +132,29 @@ test_solution() {
 }
 
 test_all() {
-    "$MY_PATH" test --day 1 --part 1
-    "$MY_PATH" test --day 1 --part 2
+    local this_day_of_month="$(date '+%d')"
+    let "this_day_of_month = $this_day_of_month"
+    local this_month="$(date '+%m')"
+    local latest_aoc_day="25"
+    if [ "$this_month" = "12" ]; then
+        latest_aoc_day="$this_day_of_month"
+    fi
+    aoc_day="1"
+    while [ "$aoc_day" -le "$latest_aoc_day" ]; do
+        for aoc_day_part in 1 2; do
+            "$MY_PATH" test --day "$aoc_day" --part "$aoc_day_part"
+            if [ "$?" -eq 8 ]; then
+                echo -e "    \e[33mNot testing any later days, because you're probably just this much behind.\e[0m"
+                exit 8
+            fi
+        done
+
+        let "aoc_day = $aoc_day + 1"
+    done
 }
 
 test() {
-    if [ "$test_all" = "true" ]; then
+    if [ -n "$test_all" ]; then
         test_all
     else
         test_solution
@@ -122,10 +164,21 @@ test() {
 solve() {
     if [ -z "$AOC_SESSION_ID" ]; then
         echo -e "\033[31mThe \033[1m\$AOC_SESSION_ID\033[22m environment variable must be set."
-        echo -e "Unable to fetch today's input from: \033[1m$day_input_url\033[0m"
+        echo -e "Unable to fetch today's input from: \033[1m${day_input_url}\033[0m"
+        exit 6
     fi
 
     curl --cookie "session=$AOC_SESSION_ID" "$day_input_url" 2>/dev/null | "$day_bin" -p "$part"
 }
 
-$subcmd
+while true; do
+    make
+
+    $subcmd
+
+    if [ -z "$test_watch" ]; then
+        exit 0
+    fi
+
+    inotifywait --event modify --event attrib --event close_write --event move --event create --recursive .
+done

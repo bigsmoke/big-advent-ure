@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -10,6 +11,12 @@
 #define OPEN_CHAR '.'
 
 
+typedef enum
+{
+    PART_1 = 1,
+    PART_2 = 2
+} day_part_t;
+
 typedef struct slope_run
 {
     int x, y;
@@ -17,26 +24,42 @@ typedef struct slope_run
     int direction_x, direction_y;
     int trees_encountered;
     int skip_next_line;
+    day_part_t puzzle_part_filter;
 } slope_run_t;
 
 
 int main(int argc, char *argv[])
 {
     slope_run_t runs[] = {
-        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 1, .direction_y = 1, .trees_encountered = 0 },
-        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 3, .direction_y = 1, .trees_encountered = 0 },  // same as part 1
-        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 5, .direction_y = 1, .trees_encountered = 0 },
-        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 7, .direction_y = 1, .trees_encountered = 0 },
-        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 1, .direction_y = 2, .trees_encountered = 0 }
+        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 1, .direction_y = 1, .trees_encountered = 0, .puzzle_part_filter = PART_2 },
+        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 3, .direction_y = 1, .trees_encountered = 0, .puzzle_part_filter = PART_1 | PART_2 },
+        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 5, .direction_y = 1, .trees_encountered = 0, .puzzle_part_filter = PART_2 },
+        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 7, .direction_y = 1, .trees_encountered = 0, .puzzle_part_filter = PART_2 },
+        { .x = 1, .y = 1, .pattern_i = 0, .direction_x = 1, .direction_y = 2, .trees_encountered = 0, .puzzle_part_filter = PART_2 },
     };
-    int num_runs = 5;
+    int num_runs = sizeof(runs)/sizeof(runs[0]);
 
-    char grid_line_pattern[GRID_LINE_INPUT_LENGTH];
+    int day_part = 1;
+    if (argc > 1) {
+        if (strcmp(argv[1], "1") != 0 && strcmp(argv[1], "2") != 0)
+        {
+            fprintf(stderr, "Invalid argument: '%s'\n", argv[1]);
+            fprintf(stderr, "Usage: solve <part>\n\n    <part>   Part 1 or 2 of the day's puzzle [default: 1]\n");
+            exit(EXIT_FAILURE);
+        }
+        day_part = atoi(argv[1]);
+    }
+
+    char grid_line_pattern[GRID_LINE_INPUT_LENGTH];  // We know the actual input lines don't exceed this size.
     int n;
     int line_no = 0;
+    size_t line_length;
+    size_t pattern_length;
 
-    while ((n = read(STDIN_FILENO, &grid_line_pattern, GRID_LINE_INPUT_LENGTH)) != 0)
+    while (getline(&grid_line_pattern, &line_length, stdin) != -1)
     {
+        pattern_length = line_length - 1;
+
         if (n == -1)
         {
             if (errno == EINTR)
@@ -54,6 +77,9 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < num_runs; i++)
         {
+            if ((runs[i].puzzle_part_filter & day_part) == 0)
+                continue;
+
             if (runs[i].direction_y > 1 && ((line_no - 1) % runs[i].direction_y) != 0)
                 continue;  // Skipping line because vertical direction > 1
 
@@ -71,6 +97,9 @@ int main(int argc, char *argv[])
     int product = 1;
     for (int i = 0; i < num_runs; i++)
     {
+        fprintf(stdout, "%d %d %d\n", runs[i].puzzle_part_filter, day_part, runs[i].trees_encountered);
+        if ((runs[i].puzzle_part_filter & day_part) == 0)
+            continue;
         fprintf(stdout, "%d\n", runs[i].trees_encountered);
         product *= runs[i].trees_encountered;
     }
