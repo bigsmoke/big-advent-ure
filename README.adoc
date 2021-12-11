@@ -1,0 +1,5 @@
+= `big-advent-ure` – BigSmoke's Advent of Code adventures
+
+This repo contains my AoC flaylings in programming languages in which I'm far
+from fluent. The purpose of this repo is noble: to make my ignorance a bit more
+public, so that I can learn from the less ignorant.
